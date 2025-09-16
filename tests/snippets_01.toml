@@ -1,0 +1,20 @@
+[test1]
+expected_codes = [
+    "FUR901", # closing bracket should be indented to match continuation lines 
+]
+src = """
+a = [
+    1,
+    2,
+]
+"""
+
+[test2]
+expected_codes = [
+]
+src = """
+a = [
+    1,
+    2,
+    ]
+"""
