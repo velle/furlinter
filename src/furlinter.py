@@ -138,6 +138,9 @@ def _check_FUR901(srccode: str) -> Iterable[Tuple[int,int,str]]:
                    f"(expected col {desired_col}, found col {ctx.closer_col})")
             yield (ctx.closer_line, ctx.closer_col, msg)
 
+def _check_all(srccode: str):
+    yield from _check_FUR901(srccode)
+
 class FurLinter:
     """Flake8 plugin entry point."""
     name = "furlinter"
@@ -161,5 +164,5 @@ class FurLinter:
             except Exception:
                 return
 
-        for line, col, message in _check_FUR901(self._srccode):
+        for line, col, message in _check_all(self._srccode):
             yield line, col, message, type(self)
