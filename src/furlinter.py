@@ -50,9 +50,9 @@ def _first_non_ws_col(line: str) -> int:
         i += 1
     return i
 
-def _iter_contexts(code_bytes: bytes) -> Iterable[Context]:
+def _iter_contexts(srccode_bytes: bytes) -> Iterable[Context]:
     """Yield bracket contexts discovered via tokenize (stack-based)."""
-    tokgen = tokenize.tokenize(io.BytesIO(code_bytes).readline)
+    tokgen = tokenize.tokenize(io.BytesIO(srccode_bytes).readline)
 
     stack: List[Context] = []
     seen_first_token_on_line: Set[Tuple[int, int]] = set()  # (line, depth) to avoid duplicates
@@ -104,20 +104,20 @@ def _desired_inner_col(ctx: Context) -> Optional[int]:
     candidates = [col for col, n in counts.items() if n == maxfreq]
     return min(candidates)
 
-def _is_closer_only_line(code_lines: List[str], ctx: Context) -> bool:
+def _is_closer_only_line(srccode_lines: List[str], ctx: Context) -> bool:
     """Return True if the line with the closer has no non-whitespace tokens before the closer."""
     if ctx.closer_line is None or ctx.closer_col is None:
         return False
-    line = code_lines[ctx.closer_line - 1]
+    line = srccode_lines[ctx.closer_line - 1]
     prefix = line[:ctx.closer_col]
     # If there's any non-space/tab char in prefix, then there's code before closer
     return all(ch in " \t" for ch in prefix)
 
-def _check_FUR901(code: str) -> Iterable[Tuple[int,int,str]]:
+def _check_FUR901(srccode: str) -> Iterable[Tuple[int,int,str]]:
     """Yield (line, col, message) for FUR901 violations."""
-    code_bytes = code.encode("utf-8")
-    contexts = list(_iter_contexts(code_bytes))
-    lines = code.splitlines(keepends=False)
+    srccode_bytes = srccode.encode("utf-8")
+    contexts = list(_iter_contexts(srccode_bytes))
+    lines = srccode.splitlines(keepends=False)
 
     for ctx in contexts:
         # Only care about multiline contexts with at least one inner line
@@ -147,19 +147,19 @@ class FurLinter:
         # flake8 passes in 'tree' (AST) which we don't use for token-level checks
         self.filename = filename
         self._lines = lines  # may be provided by flake8 for stdin
-        self._code: Optional[str] = None
+        self._srccode: Optional[str] = None
 
     def run(self) -> Iterable[Tuple[int, int, str, type]]:
-        # Load code either from flake8-provided lines or from the file
+        # Load source code either from flake8-provided lines or from the file
         if self._lines is not None:
-            self._code = "".join(self._lines)
+            self._srccode = "".join(self._lines)
         else:
             if self.filename in (None, "stdin", "-"):
                 return
             try:
-                self._code = Path(self.filename).read_text(encoding="utf-8")
+                self._srccode = Path(self.filename).read_text(encoding="utf-8")
             except Exception:
                 return
 
-        for line, col, message in _check_FUR901(self._code):
+        for line, col, message in _check_FUR901(self._srccode):
             yield line, col, message, type(self)
