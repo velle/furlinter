@@ -1,0 +1,11 @@
+[test1]
+expected_codes = [
+    'E125'
+]
+src = """
+if (
+        "many items "
+        "to check"
+        ):
+    pass
+"""

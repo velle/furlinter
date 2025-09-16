@@ -1,0 +1,28 @@
+[test1]
+expected_codes = [
+]
+src = """
+a = [1, 2]
+"""
+
+[test2]
+expected_codes = [
+]
+src = """
+a = [1, 2,]
+"""
+
+[test3]
+expected_codes = [
+]
+src = """
+a = [1, 2, ]
+"""
+
+
+[test4]
+expected_codes = [
+]
+src = """
+a = [1,   2,]
+"""

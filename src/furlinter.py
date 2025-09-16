@@ -113,16 +113,32 @@ def _is_closer_only_line(srccode_lines: List[str], ctx: Context) -> bool:
     # If there's any non-space/tab char in prefix, then there's code before closer
     return all(ch in " \t" for ch in prefix)
 
-def _check_FUR901(srccode: str) -> Iterable[Tuple[int,int,str]]:
+from typing import Iterable, Tuple
+
+def _check_FUR901(srccode: str) -> Iterable[Tuple[int, int, str]]:
     """Yield (line, col, message) for FUR901 violations."""
     srccode_bytes = srccode.encode("utf-8")
     contexts = list(_iter_contexts(srccode_bytes))
     lines = srccode.splitlines(keepends=False)
 
+    def _colon_after_closer(line: str, closer_col: int) -> bool:
+        """True if the first non-space char after the closer is a colon."""
+        i = closer_col + 1  # look *after* the closer char
+        while i < len(line) and line[i] in " \t":
+            i += 1
+        return i < len(line) and line[i] == ":"
+
     for ctx in contexts:
         # Only care about multiline contexts with at least one inner line
         if ctx.closer_line is None or not ctx.inner_line_first_cols:
             continue
+
+        # --- NEW: Skip block headers like `if (...):`, `def foo(...):`, etc.
+        # If a colon follows the closer on the same line, it's a block header → not a FUR901 case.
+        line_text = lines[ctx.closer_line - 1]  # ctx lines are typically 1-based
+        if _colon_after_closer(line_text, ctx.closer_col):
+            continue
+
         # We only flag when the ending is closer-only (no element before closer on that line)
         closer_only = _is_closer_only_line(lines, ctx) and not ctx.element_and_closer_same_line
         if not closer_only:
