@@ -36,6 +36,28 @@ except Exception:
     except Exception as e:  # pragma: no cover
         raise RuntimeError("Install Python 3.11+ or `pip install tomli` for TOML support") from e
 
+def filter_codes(codes: List[str], select: List[str] = None, ignore: List[str] = None) -> List[str]:
+    """
+    Filter error codes the same way Flake8 does.
+    - select: if non-empty, only include codes starting with any prefix in select
+    - ignore: drop codes starting with any prefix in ignore
+    """
+    if select is None:
+        select = []
+    if ignore is None:
+        ignore = []
+
+    result = []
+    for code in codes:
+        # apply select
+        if select:
+            if not any(code.startswith(prefix) for prefix in select):
+                continue
+        # apply ignore
+        if any(code.startswith(prefix) for prefix in ignore):
+            continue
+        result.append(code)
+    return result
 
 # --- Discovery ----------------------------------------------------------------
 
@@ -132,10 +154,13 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize(("case_id", "src", "expected_codes"), all_cases, ids=ids)
 
 
-def test_snippet(case_id: str, src: str, expected_codes: List[str]):
+def test_snippet(case_id: str, src: str, expected_codes: List[str], selected_codes: List[str], ignored_codes: List[str]):
     got_codes, flake8_output = flake8_codes_for_snippet(src)
     exp_set = set(expected_codes)
     got_set = set(got_codes)
+
+    exp_set = set(filter_codes(list(exp_set), select=selected_codes, ignore=ignored_codes))
+    got_set = set(filter_codes(list(got_set), select=selected_codes, ignore=ignored_codes))
 
     missing = sorted(exp_set - got_set)
     unexpected = sorted(got_set - exp_set)
